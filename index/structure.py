@@ -15,20 +15,21 @@ class Index:
 
     def index(self, term: str, doc_id: int, term_freq: int):
         if term not in self.dic_index:
-            int_term_id = len(self.dic_index) + 1
+            int_term_id = len(self.dic_index)
             self.dic_index[term] = self.create_index_entry(int_term_id)
         else:
             int_term_id = self.get_term_id(term)
 
         self.add_index_occur(self.dic_index[term], doc_id, int_term_id, term_freq)
+        self.set_documents.add(doc_id)
 
     @property
     def vocabulary(self) -> List[str]:
-        return []
+        return self.dic_index.keys()
 
     @property
     def document_count(self) -> int:
-        return 0
+        return len(self.set_documents)
 
     @abstractmethod
     def get_term_id(self, term: str):
@@ -86,7 +87,7 @@ class TermOccurrence:
         return hash((self.doc_id, self.term_id))
 
     def __eq__(self, other_occurrence: "TermOccurrence"):
-        return False
+        return self.term_id == other_occurrence.term_id and self.doc_id == other_occurrence.doc_id
 
     def __lt__(self, other_occurrence: "TermOccurrence"):
         return False
@@ -104,16 +105,16 @@ class HashIndex(Index):
         return self.dic_index[term][0].term_id
 
     def create_index_entry(self, termo_id: int) -> List:
-        return None
-
-    def add_index_occur(self, entry_dic_index: List[TermOccurrence], doc_id: int, term_id: int, term_freq: int):
-        entry_dic_index.append(None)
-
-    def get_occurrence_list(self, term: str) -> List:
         return []
 
+    def add_index_occur(self, entry_dic_index: List[TermOccurrence], doc_id: int, term_id: int, term_freq: int):
+        entry_dic_index.append(TermOccurrence(doc_id, term_id, term_freq))
+
+    def get_occurrence_list(self, term: str) -> List:
+        return self.dic_index[term] if term in self.dic_index else []
+
     def document_count_with_term(self, term: str) -> int:
-        return 0
+        return len(self.get_occurrence_list(term))
 
 
 class TermFilePosition:
