@@ -1,3 +1,4 @@
+from ast import Break
 from IPython.display import clear_output
 from typing import List, Set, Union
 from abc import abstractmethod
@@ -81,16 +82,22 @@ class TermOccurrence:
         self.term_freq = term_freq
 
     def write(self, idx_file):
-        pass
+       idx_file.write(self.doc_id.to_bytes(4,byteorder="big"))
+       idx_file.write(self.term_id.to_bytes(4,byteorder="big"))
+       idx_file.write(self.term_freq.to_bytes(4,byteorder="big"))
 
     def __hash__(self):
         return hash((self.doc_id, self.term_id))
 
     def __eq__(self, other_occurrence: "TermOccurrence"):
+        if other_occurrence is None:
+            return False
         return self.term_id == other_occurrence.term_id and self.doc_id == other_occurrence.doc_id
 
     def __lt__(self, other_occurrence: "TermOccurrence"):
-        return False
+        if other_occurrence is None:
+            return True
+        return self.term_id < other_occurrence.term_id if self.term_id != other_occurrence.term_id else self.doc_id < other_occurrence.doc_id
 
     def __str__(self):
         return f"( doc: {self.doc_id} term_id:{self.term_id} freq: {self.term_freq})"
@@ -140,7 +147,8 @@ class FileIndex(Index):
 
         self.lst_occurrences_tmp = [None]*FileIndex.TMP_OCCURRENCES_LIMIT
         self.idx_file_counter = 0
-        self.str_idx_file_name = "occur_idx_file"
+        # self.str_idx_file_name = "occur_idx_file"
+        self.str_idx_file_name = None
 
         # metodos auxiliares para verifica o tamanho da lst_occurrences_tmp
         self.idx_tmp_occur_last_element  = -1
@@ -150,32 +158,50 @@ class FileIndex(Index):
         return self.dic_index[term].term_id
 
     def create_index_entry(self, term_id: int) -> TermFilePosition:
-        return None
+        return TermFilePosition(term_id)
 
     def add_index_occur(self, entry_dic_index: TermFilePosition, doc_id: int, term_id: int, term_freq: int):
         #complete aqui adicionando um novo TermOccurrence na lista lst_occurrences_tmp
         #não esqueça de atualizar a(s) variável(is) auxiliares apropriadamente
+        
+        self.lst_occurrences_tmp[self.idx_tmp_occur_last_element + 1] = TermOccurrence(doc_id, term_id, term_freq)
+        self.idx_tmp_occur_last_element += 1
 
-        if None:
+        if self.get_tmp_occur_size() > FileIndex.TMP_OCCURRENCES_LIMIT:
             self.save_tmp_occurrences()
 
     def next_from_list(self) -> TermOccurrence:
-        if self.get_tmp_occur_size() > 0:
-            # obtenha o proximo da lista e armazene em nex_occur
-            # não esqueça de atualizar a(s) variável(is) auxiliares apropriadamente
-
-
-            return next_occur
-        else:
+        # obtenha o proximo da lista e armazene em nex_occur
+        # não esqueça de atualizar a(s) variável(is) auxiliares apropriadamente
+        if self.get_tmp_occur_size() <= 0:
             return None
+
+        next_occur = self.lst_occurrences_tmp[self.idx_tmp_occur_first_element]
+        self.lst_occurrences_tmp[self.idx_tmp_occur_first_element] = None
+        self.idx_tmp_occur_first_element += 1
+
+        return next_occur
+    
+    def get_tmp_occur_size(self):
+        return (self.idx_tmp_occur_last_element - self.idx_tmp_occur_first_element) + 1
+
+        
 
     def next_from_file(self, file_pointer) -> TermOccurrence:
-        # next_from_file = pickle.load(file_idx)
-        bytes_doc_id = file_pointer.read(4)
-        if not bytes_doc_id:
+        if file_pointer is None:
             return None
-            # seu código aqui :)
+
+        bytes_doc_id = file_pointer.read(4)
+        bytes_term_id = file_pointer.read(4)
+        bytes_term_freq = file_pointer.read(4)
         
+
+        if not bytes_doc_id or not bytes_term_id or not bytes_term_freq:
+            return None
+        
+        doc_id = int.from_bytes(bytes_doc_id,byteorder='big')
+        term_id = int.from_bytes(bytes_term_id,byteorder='big')
+        term_freq = int.from_bytes(bytes_term_freq,byteorder='big')
 
         return TermOccurrence(doc_id, term_id, term_freq)
 
@@ -184,7 +210,46 @@ class FileIndex(Index):
         # Ordena pelo term_id, doc_id
         #    Para eficiência, todo o código deve ser feito com o garbage collector desabilitado gc.disable()
         gc.disable()
+        
+        # Aparentemente o python nao connsegue ordenar um intervalo de um array, entao ele precisou ser extraido
+        valid_values = self.lst_occurrences_tmp[self.idx_tmp_occur_first_element:self.
+                idx_tmp_occur_last_element+1] 
+        valid_values.sort()
+        self.lst_occurrences_tmp[self.idx_tmp_occur_first_element:self.
+                idx_tmp_occur_last_element+1] = valid_values
 
+        current_file = None
+        if self.str_idx_file_name is None:
+            self.str_idx_file_name= f'occur_index_{self.idx_file_counter}'
+        else:
+            current_file = open(self.str_idx_file_name, 'rb')
+            self.idx_file_counter += 1
+            self.str_idx_file_name = f'occur_index_{self.idx_file_counter}'
+
+        new_file = open(f'occur_index_{self.idx_file_counter}', 'wb')
+
+        file_idx = self.next_from_file(current_file)
+        list_idx = self.next_from_list()
+        while True:
+            if file_idx is None and list_idx is None:
+                break
+
+            lower_idx = None
+            if list_idx < file_idx or file_idx is None:
+                lower_idx = list_idx
+                list_idx = self.next_from_list()
+            else:
+                lower_idx = file_idx
+                file_idx = self.next_from_file(current_file)
+            lower_idx.write(new_file)
+        
+        self.lst_occurrences_tmp = [None] * FileIndex.TMP_OCCURRENCES_LIMIT
+        self.idx_tmp_occur_last_element  = -1
+        self.idx_tmp_occur_first_element = 0
+
+        new_file.close()
+        if current_file is not None:
+            current_file.close()
         """comparar sempre a primeira posição
         da lista com a primeira posição do arquivo usando os métodos next_from_list e next_from_file
         e use o método write do TermOccurrence para armazenar cada ocorrencia do novo índice ordenado"""
@@ -195,17 +260,26 @@ class FileIndex(Index):
         if len(self.lst_occurrences_tmp) > 0:
             self.save_tmp_occurrences()
 
+        print('abc')
         # Sugestão: faça a navegação e obetenha um mapeamento
         # id_termo -> obj_termo armazene-o em dic_ids_por_termo
         # obj_termo é a instancia TermFilePosition correspondente ao id_termo
         dic_ids_por_termo = {}
         for str_term, obj_term in self.dic_index.items():
-            pass
+            dic_ids_por_termo[obj_term.term_id] = obj_term
 
         with open(self.str_idx_file_name, 'rb') as idx_file:
+            print('abcd')
             # navega nas ocorrencias para atualizar cada termo em dic_ids_por_termo
             # apropriadamente
-            pass
+            currennt_pos = 0
+            ocurrence = self.next_from_file(idx_file)
+            while ocurrence is not None:
+                term_file_pos = dic_ids_por_termo[ocurrence.term_id]
+                print(term_file_pos)
+
+
+
 
     def get_occurrence_list(self, term: str) -> List:
         return []
