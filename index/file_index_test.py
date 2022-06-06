@@ -111,8 +111,7 @@ class FileIndexTest(unittest.TestCase):
         self.check_idx_file(self.index, set_occurrences)
         print("Inserção de alguns itens - teste 2/2 [ok]")
 
-    def test_finish_indexing2(self):
-        print('abc')
+    def test_finish_indexing(self):
         self.index = FileIndex()
         self.index.idx_tmp_occur_last_element  = 8
         self.index.idx_tmp_occur_first_element = 0

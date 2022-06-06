@@ -56,12 +56,14 @@ class Index:
         pass
 
     def write(self, arq_index: str):
-        pass
+        with open(arq_index, 'wb') as idx_file:
+            pickle.dump(self, idx_file)
     
 
     @staticmethod
     def read(arq_index: str):
-        pass
+        with open(arq_index, 'rb') as idx_file:
+            return pickle.load(idx_file)
 
     def __str__(self):
         arr_index = []
@@ -260,7 +262,6 @@ class FileIndex(Index):
         if len(self.lst_occurrences_tmp) > 0:
             self.save_tmp_occurrences()
 
-        print('abc')
         # Sugestão: faça a navegação e obetenha um mapeamento
         # id_termo -> obj_termo armazene-o em dic_ids_por_termo
         # obj_termo é a instancia TermFilePosition correspondente ao id_termo
@@ -269,20 +270,46 @@ class FileIndex(Index):
             dic_ids_por_termo[obj_term.term_id] = obj_term
 
         with open(self.str_idx_file_name, 'rb') as idx_file:
-            print('abcd')
             # navega nas ocorrencias para atualizar cada termo em dic_ids_por_termo
             # apropriadamente
-            currennt_pos = 0
+            current_pos = 0
             ocurrence = self.next_from_file(idx_file)
             while ocurrence is not None:
                 term_file_pos = dic_ids_por_termo[ocurrence.term_id]
-                print(term_file_pos)
+
+                if term_file_pos.doc_count_with_term is None:
+                    term_file_pos.doc_count_with_term = 0
+                
+                if term_file_pos.term_file_start_pos is None:
+                    term_file_pos.term_file_start_pos = current_pos
+                
+                term_file_pos.doc_count_with_term += 1
+                current_pos += 12
+
+                ocurrence = self.next_from_file(idx_file)
+            
+            
 
 
 
 
     def get_occurrence_list(self, term: str) -> List:
-        return []
+        result = []
+
+        if term not in self.dic_index:
+            return result
+        
+        term_file_pos = self.dic_index[term]
+
+        with open(self.str_idx_file_name, 'rb') as idx_file:
+            idx_file.seek(term_file_pos.term_file_start_pos)
+
+            i = 0
+            while i < term_file_pos.doc_count_with_term:
+                result.append(self.next_from_file(idx_file))
+                i += 1
+
+        return result
 
     def document_count_with_term(self, term: str) -> int:
-        return 0
+        return len(self.get_occurrence_list(term))
