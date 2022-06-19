@@ -1,5 +1,5 @@
-from index.indexer import *
-from index.structure import *
+from indexer import *
+from structure import *
 
 if __name__ == "__main__":
     HTMLIndexer.cleaner = Cleaner(stop_words_file="stopwords.txt",
@@ -10,5 +10,5 @@ if __name__ == "__main__":
 
     index = FileIndex()
     indexador = HTMLIndexer(index)
-    indexador.index_text_dir("C:\Users\savio\Documents\\ri-indexer\\ri-tp-wiki-data-master")
+    indexador.index_text_dir('C:\\Users\\savio\\Documents\\ri-indexer\\ri-tp-wiki-data-master')
     

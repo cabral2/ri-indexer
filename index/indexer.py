@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 import string
 from nltk.tokenize import word_tokenize
 import os
-
+from tqdm import tqdm
 
 class Cleaner:
     def __init__(self, stop_words_file: str, language: str,
@@ -98,7 +98,8 @@ class HTMLIndexer:
         self.index.finish_indexing()
 
     def index_text_dir(self, path: str):
-        for str_sub_dir in os.listdir(path):
+        for str_sub_dir in tqdm(os.listdir(path)):
+        # for str_sub_dir in os.listdir(path):
             path_sub_dir = f"{path}/{str_sub_dir}"
             if os.path.isdir(path_sub_dir):
                 self.index_text_dir(path_sub_dir)
