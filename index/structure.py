@@ -304,7 +304,7 @@ class FileIndex(Index):
         with open(self.str_idx_file_name, 'rb') as idx_file:
             idx_file.seek(term_file_pos.term_file_start_pos)
 
-            i = 0
+            i = 1
             while i < term_file_pos.doc_count_with_term:
                 result.append(self.next_from_file(idx_file))
                 i += 1
