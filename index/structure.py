@@ -307,8 +307,10 @@ class FileIndex(Index):
             idx_file.seek(term_file_pos.term_file_start_pos)
 
             i = 0
-            while i < term_file_pos.doc_count_with_term:
-                result.append(self.next_from_file(idx_file))
+            next = self.next_from_file(idx_file)
+            while i < term_file_pos.doc_count_with_term and next.term_id == term_file_pos.term_id:
+                result.append(next)
+                next = self.next_from_file(idx_file)
                 i += 1
 
         return result
