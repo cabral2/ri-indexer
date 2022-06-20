@@ -38,7 +38,7 @@ class Cleaner:
         return set_stop_words
 
     def is_stop_word(self, term: str):
-        return contains(self.set_stop_words, term.lower()) 
+        return contains(self.set_stop_words, term.lower())
 
     def word_stem(self, term: str):
         return self.stemmer.stem(term)
@@ -54,7 +54,7 @@ class Cleaner:
             return None
 
         term = self.preprocess_text(term)
-        
+
         if self.perform_stemming:
             return self.word_stem(term)
 
@@ -76,7 +76,7 @@ class HTMLIndexer:
     def text_word_count(self, plain_text: str):
         dic_word_count = {}
         tokens = word_tokenize(plain_text)
-        
+
         for token in tokens:
             processed_token = self.cleaner.preprocess_word(token)
             if processed_token is not None:
@@ -105,9 +105,6 @@ class HTMLIndexer:
                 self.index_text_dir(path_sub_dir)
 
             if path_sub_dir.endswith(".html"):
-                with open(path_sub_dir, encoding="utf-8") as file: 
+                with open(path_sub_dir, encoding="utf-8") as file:
                     content = file.read()
                     self.index_text(int(str_sub_dir.split(".")[0]), content)
-
-
-        

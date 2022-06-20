@@ -1,4 +1,5 @@
 from ast import Break
+import sys
 from IPython.display import clear_output
 from typing import List, Set, Union
 from abc import abstractmethod
@@ -58,11 +59,12 @@ class Index:
     def write(self, arq_index: str):
         with open(arq_index, 'wb') as idx_file:
             pickle.dump(self, idx_file)
-    
+
 
     @staticmethod
     def read(arq_index: str):
         with open(arq_index, 'rb') as idx_file:
+            sys.path.append('index')
             return pickle.load(idx_file)
 
     def __str__(self):
@@ -165,7 +167,7 @@ class FileIndex(Index):
     def add_index_occur(self, entry_dic_index: TermFilePosition, doc_id: int, term_id: int, term_freq: int):
         #complete aqui adicionando um novo TermOccurrence na lista lst_occurrences_tmp
         #não esqueça de atualizar a(s) variável(is) auxiliares apropriadamente
-        
+
         self.lst_occurrences_tmp[self.idx_tmp_occur_last_element + 1] = TermOccurrence(doc_id, term_id, term_freq)
         self.idx_tmp_occur_last_element += 1
 
@@ -183,11 +185,11 @@ class FileIndex(Index):
         self.idx_tmp_occur_first_element += 1
 
         return next_occur
-    
+
     def get_tmp_occur_size(self):
         return (self.idx_tmp_occur_last_element - self.idx_tmp_occur_first_element) + 1
 
-        
+
 
     def next_from_file(self, file_pointer) -> TermOccurrence:
         if file_pointer is None:
@@ -196,11 +198,11 @@ class FileIndex(Index):
         bytes_doc_id = file_pointer.read(4)
         bytes_term_id = file_pointer.read(4)
         bytes_term_freq = file_pointer.read(4)
-        
+
 
         if not bytes_doc_id or not bytes_term_id or not bytes_term_freq:
             return None
-        
+
         doc_id = int.from_bytes(bytes_doc_id,byteorder='big')
         term_id = int.from_bytes(bytes_term_id,byteorder='big')
         term_freq = int.from_bytes(bytes_term_freq,byteorder='big')
@@ -212,10 +214,10 @@ class FileIndex(Index):
         # Ordena pelo term_id, doc_id
         #    Para eficiência, todo o código deve ser feito com o garbage collector desabilitado gc.disable()
         gc.disable()
-        
+
         # Aparentemente o python nao connsegue ordenar um intervalo de um array, entao ele precisou ser extraido
         valid_values = self.lst_occurrences_tmp[self.idx_tmp_occur_first_element:self.
-                idx_tmp_occur_last_element+1] 
+                idx_tmp_occur_last_element+1]
         valid_values.sort()
         self.lst_occurrences_tmp[self.idx_tmp_occur_first_element:self.
                 idx_tmp_occur_last_element+1] = valid_values
@@ -244,7 +246,7 @@ class FileIndex(Index):
                 lower_idx = file_idx
                 file_idx = self.next_from_file(current_file)
             lower_idx.write(new_file)
-        
+
         self.lst_occurrences_tmp = [None] * FileIndex.TMP_OCCURRENCES_LIMIT
         self.idx_tmp_occur_last_element  = -1
         self.idx_tmp_occur_first_element = 0
@@ -279,16 +281,16 @@ class FileIndex(Index):
 
                 if term_file_pos.doc_count_with_term is None:
                     term_file_pos.doc_count_with_term = 0
-                
+
                 if term_file_pos.term_file_start_pos is None:
                     term_file_pos.term_file_start_pos = current_pos
-                
+
                 term_file_pos.doc_count_with_term += 1
                 current_pos += 12
 
                 ocurrence = self.next_from_file(idx_file)
-            
-            
+
+
 
 
 
@@ -298,13 +300,13 @@ class FileIndex(Index):
 
         if term not in self.dic_index:
             return result
-        
+
         term_file_pos = self.dic_index[term]
 
         with open(self.str_idx_file_name, 'rb') as idx_file:
             idx_file.seek(term_file_pos.term_file_start_pos)
 
-            i = 1
+            i = 0
             while i < term_file_pos.doc_count_with_term:
                 result.append(self.next_from_file(idx_file))
                 i += 1
