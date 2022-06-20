@@ -48,6 +48,8 @@ class Cleaner:
 
     def preprocess_word(self, term: str) -> str or None:
         dots = [';', '!', '?', ':', ',', '.']
+        if term in self.set_punctuation:
+            return None
         if contains(dots, term):
             return None
         if self.perform_stop_words_removal and self.is_stop_word(term):
@@ -95,8 +97,6 @@ class HTMLIndexer:
         for key, value in word_dict.items():
             self.index.index(key, doc_id, value)
 
-        self.index.finish_indexing()
-
     def index_text_dir(self, path: str):
         for str_sub_dir in tqdm(os.listdir(path)):
         # for str_sub_dir in os.listdir(path):
@@ -108,3 +108,5 @@ class HTMLIndexer:
                 with open(path_sub_dir, encoding="utf-8") as file:
                     content = file.read()
                     self.index_text(int(str_sub_dir.split(".")[0]), content)
+
+        self.index.finish_indexing()
